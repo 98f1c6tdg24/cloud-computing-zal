@@ -12,26 +12,26 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "lab-iac-rg"
+  name     = "rg-lab-automation-student"
   location = "westeurope"
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "lab-vnet"
-  address_space       = ["10.0.0.0/16"]
-  location            = azurerm_resource_group.rg.location
+  name                = "vnet-lab"
   resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  address_space       = ["10.0.0.0/16"]
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "lab-subnet"
+  name                 = "subnet-web"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_public_ip" "pip" {
-  name                = "lab-vm-ip"
+  name                = "pip-server"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
@@ -39,7 +39,7 @@ resource "azurerm_public_ip" "pip" {
 }
 
 resource "azurerm_network_security_group" "nsg" {
-  name                = "lab-nsg"
+  name                = "nsg-web"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -66,10 +66,22 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
+
+  security_rule {
+    name                       = "FlaskDemo"
+    priority                   = 1003
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "5000"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 resource "azurerm_network_interface" "nic" {
-  name                = "lab-vm-nic"
+  name                = "nic-server"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -81,21 +93,18 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
+resource "azurerm_network_interface_security_group_association" "nic_nsg" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = "lab-web-vm"
+  name                = "vm-stack-server"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_B1s"
   admin_username      = "azureuser"
-
-  network_interface_ids = [
-    azurerm_network_interface.nic.id,
-  ]
+  network_interface_ids = [azurerm_network_interface.nic.id]
 
   admin_ssh_key {
     username   = "azureuser"
@@ -113,8 +122,4 @@ resource "azurerm_linux_virtual_machine" "vm" {
     sku       = "22_04-lts"
     version   = "latest"
   }
-}
-
-output "public_ip_address" {
-  value = azurerm_linux_virtual_machine.vm.public_ip_address
 }
