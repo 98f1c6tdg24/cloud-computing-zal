@@ -72,3 +72,8 @@ terraform destroy -auto-approve
 
 or use one of the destroy scripts from `lab05-automation`.
 
+## About
+
+This repository was created as part of Cloud Technologies laboratory materials.
+
+Author: MagT (magt.ovh)
