@@ -1,0 +1,47 @@
+---
+- name: Uruchomienie demonstracyjnego kontenera Flask na VM
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: Aktualizacja cache apt
+      apt:
+        update_cache: yes
+
+    - name: Instalacja Docker
+      apt:
+        name:
+          - docker.io
+        state: present
+
+    - name: Uruchomienie usługi Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Utworzenie katalogu aplikacji
+      file:
+        path: /opt/flask-cloud-demo
+        state: directory
+        owner: azureuser
+        group: azureuser
+        mode: '0755'
+
+    - name: Skopiowanie aplikacji Flask
+      copy:
+        src: ../lab02-flask-container/
+        dest: /opt/flask-cloud-demo/
+        owner: azureuser
+        group: azureuser
+        mode: '0644'
+
+    - name: Zbudowanie obrazu Flask
+      command: docker build -t flask-cloud-demo /opt/flask-cloud-demo
+
+    - name: Usunięcie starego kontenera, jeśli istnieje
+      command: docker rm -f flask-cloud-demo
+      ignore_errors: true
+
+    - name: Uruchomienie kontenera Flask
+      command: docker run -d --restart unless-stopped --name flask-cloud-demo -p 5000:5000 flask-cloud-demo

@@ -9,7 +9,7 @@ def index():
     <html lang="pl">
     <head>
         <meta charset="UTF-8">
-        <title>IaC Cloud Lab - Flask</title>
+        <title>Flask in Azure Cloud Demo</title>
         <style>
             body {
                 background-color: #1a1a1a;
@@ -29,13 +29,11 @@ def index():
         </style>
     </head>
     <body>
-        <h1>IaC Cloud Lab</h1>
+        <h1>Flask in Azure Cloud Demo</h1>
         <div class="box">
-            <p>Tryb: pełna automatyzacja</p>
-            <p>Aplikacja demonstracyjna: Flask</p>
-            <p>Aprowizacja infrastruktury: Terraform</p>
-            <p>Konfiguracja systemu: Ansible</p>
-            <p>Status: Sukces</p>
+            <p>Aplikacja: Flask</p>
+            <p>Uruchomienie: Docker / Podman / automation</p>
+            <p>Status: działa</p>
         </div>
     </body>
     </html>

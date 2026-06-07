@@ -24,61 +24,51 @@ Required tools:
 - Ansible
 - SSH client
 
-## Quick start: full automation demo
+Repository URL used in the lab:
 
 ```bash
-az login
 git clone https://github.com/magtk/iac-cloud-lab.git
-cd iac-cloud-lab
-chmod +x scripts/deploy.sh scripts/destroy.sh
-./scripts/deploy.sh
 ```
 
-Open the displayed address:
+This repository is a starter kit for a Cloud Technologies laboratory.
 
-```text
-http://PUBLIC_IP:5000
-```
-
-Destroy resources after the lab:
-
-```bash
-./scripts/destroy.sh
-```
-
-## Apache task
-
-Apache configuration is not fully solved in the automation path. Students should complete:
-
-```text
-ansible/playbook-apache-task.yml
-```
-
-and verify the result at:
-
-```text
-http://PUBLIC_IP
-```
-
-## Repository structure
+## Lab structure
 
 ```text
 iac-cloud-lab/
-├── terraform/
-│   ├── main.tf
-│   └── outputs.tf
-├── ansible/
-│   ├── inventory.ini.template
-│   ├── playbook-flask.yml
-│   ├── playbook-apache-task.yml
-│   └── files/
-│       └── index.html.template
-├── app/
-│   ├── app.py
-│   └── requirements.txt
-├── scripts/
-│   ├── deploy.sh
-│   └── destroy.sh
-└── .gitignore
+├── lab01-nginx-aci/
+├── lab02-flask-container/
+├── lab03-terraform/
+├── lab04-ansible/
+└── lab05-automation/
 ```
+
+## What students should see
+
+- a ready-made container can be launched locally and in Azure,
+- a simple Flask application can be containerized with Docker or Podman,
+- cloud infrastructure can be created from code using Terraform,
+- a VM can be configured using Ansible,
+- deployment steps can be orchestrated with Bash or Python.
+
+## Important
+
+The automation examples deploy the Flask container demo.
+
+Apache configuration is intentionally left as a student task in:
+
+```text
+lab04-ansible/playbook-apache-task.yml
+```
+
+## Cleanup
+
+Always remove Azure resources after the lab:
+
+```bash
+cd lab03-terraform
+terraform destroy -auto-approve
+```
+
+or use one of the destroy scripts from `lab05-automation`.
 
