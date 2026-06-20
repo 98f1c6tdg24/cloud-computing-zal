@@ -15,23 +15,34 @@
 # - ustaw become: true
 # - po wykonaniu playbooka sprawdź stronę: http://PUBLIC_IP
 
-- name: Zadanie studenckie - konfiguracja Apache
+- name: Konfiguracja Apache na maszynie VM na ocenę 3.0
   hosts: webservers
   become: true
 
   tasks:
-    - name: TODO - aktualizacja cache apt
-      debug:
-        msg: "Zastąp ten task modułem apt."
+    - name: Aktualizacja cache apt
+      apt:
+        update_cache: yes
 
-    - name: TODO - instalacja Apache
-      debug:
-        msg: "Zastąp ten task instalacją apache2."
+    - name: Instalacja Apache
+      apt:
+        name: apache2
+        state: present
 
-    - name: TODO - uruchomienie Apache
-      debug:
-        msg: "Zastąp ten task uruchomieniem i włączeniem usługi apache2."
+    - name: Uruchomienie uslugi Apache
+      service:
+        name: apache2
+        state: started
 
-    - name: TODO - podmiana pliku index.html
-      debug:
-        msg: "Zastąp ten task modułem copy."
+    - name: Wlaczenie Apache przy starcie systemu
+      service:
+        name: apache2
+        enabled: yes
+
+    - name: Skopiowanie pliku index.html
+      copy:
+        src: files/kostka.html
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
