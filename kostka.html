@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kostka Rubika 3D</title>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(
+                circle at top,
+                #334155 0%,
+                #1e293b 35%,
+                #0f172a 70%,
+                #020617 100%
+            );
+        }
+
+        #opis {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 14px 16px;
+            border-radius: 12px;
+            z-index: 1;
+            line-height: 1.5;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.35);
+            max-width: 320px;
+        }
+
+        #opis b {
+            color: #e0f2fe;
+        }
+
+        #status {
+            color: #fde68a;
+            font-weight: bold;
+        }
+
+        #predkosc {
+            color: #bbf7d0;
+            font-weight: bold;
+        }
+    </style>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+
+<body>
+    <div id="opis">
+        <b>Kostka Rubika 3D</b><br>
+        Obracanie widoku: myszka<br>
+        Przybliżanie: scroll<br><br>
+
+        <b>Sterowanie kostką:</b><br>
+        Spacja - start / stop obrotu<br>
+        R - reset położenia<br>
+        S - szybszy obrót<br>
+        W - wolniejszy obrót<br><br>
+
+        Status: <span id="status">obrót włączony</span><br>
+        Prędkość: <span id="predkosc">1.0x</span>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // SCENA
+
+        const scene = new THREE.Scene();
+
+        // KAMERA
+
+        const camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            100
+        );
+        camera.position.set(7, 6, 8);
+
+        // RENDERER
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x000000, 0);
+        document.body.appendChild(renderer.domElement);
+
+        // ŚWIATŁO
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.25);
+        directionalLight.position.set(6, 8, 6);
+        scene.add(directionalLight);
+
+        const pointLight = new THREE.PointLight(0x88ccff, 1.0, 30);
+        pointLight.position.set(-5, 4, 5);
+        scene.add(pointLight);
+
+        // SIATKA POD KOSTKĄ
+
+        const grid = new THREE.GridHelper(10, 20, 0x66aaff, 0x335577);
+        grid.position.y = -2;
+        scene.add(grid);
+
+        // FUNKCJA TWORZĄCA TEKSTURĘ Z NAPISEM
+
+        function createFaceTexture(text, bgColor, textColor = "white", strokeColor = "black") {
+            const canvas = document.createElement("canvas");
+            canvas.width = 512;
+            canvas.height = 512;
+
+            const ctx = canvas.getContext("2d");
+
+            // Tło pola
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Czarna ramka pola
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 16;
+            ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+
+            // Napis na środkowym polu ściany
+            if (text !== "") {
+                ctx.fillStyle = textColor;
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 12;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 78px Arial Black, Arial, sans-serif";
+
+                ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
+                ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            return texture;
+        }
+
+        function createMaterial(text, bgColor, textColor = "white", strokeColor = "black") {
+            return new THREE.MeshStandardMaterial({
+                map: createFaceTexture(text, bgColor, textColor, strokeColor)
+            });
+        }
+
+        // Czarny materiał dla ścian niewidocznych / wewnętrznych
+        const blackMaterial = new THREE.MeshStandardMaterial({
+            color: 0x111111
+        });
+
+        // GRUPA KOSTKI RUBIKA
+
+        const rubikCube = new THREE.Group();
+        scene.add(rubikCube);
+
+        const smallCubeGeometry = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+
+        // TWORZENIE KOSTKI RUBIKA 3x3x3
+
+        for (let x = -1; x <= 1; x++) {
+            for (let y = -1; y <= 1; y++) {
+                for (let z = -1; z <= 1; z++) {
+
+                    // prawa ściana
+                    let rightMaterial = blackMaterial;
+                    if (x === 1) {
+                        const text = (y === 0 && z === 0) ? "PRAWA" : "";
+                        rightMaterial = createMaterial(text, "#ff2d2d", "white", "black");
+                    }
+
+                    // lewa ściana
+                    let leftMaterial = blackMaterial;
+                    if (x === -1) {
+                        const text = (y === 0 && z === 0) ? "LEWA" : "";
+                        leftMaterial = createMaterial(text, "#ff8c00", "white", "black");
+                    }
+
+                    // górna ściana - biała, dlatego napis jest ciemny
+                    let topMaterial = blackMaterial;
+                    if (y === 1) {
+                        const text = (x === 0 && z === 0) ? "GÓRA" : "";
+                        topMaterial = createMaterial(text, "#ffffff", "#111111", "#666666");
+                    }
+
+                    // dolna ściana
+                    let bottomMaterial = blackMaterial;
+                    if (y === -1) {
+                        const text = (x === 0 && z === 0) ? "DÓŁ" : "";
+                        bottomMaterial = createMaterial(text, "#ffe600", "#111111", "#555555");
+                    }
+
+                    // przednia ściana
+                    let frontMaterial = blackMaterial;
+                    if (z === 1) {
+                        const text = (x === 0 && y === 0) ? "PRZÓD" : "";
+                        frontMaterial = createMaterial(text, "#00b050", "white", "black");
+                    }
+
+                    // tylna ściana
+                    let backMaterial = blackMaterial;
+                    if (z === -1) {
+                        const text = (x === 0 && y === 0) ? "TYŁ" : "";
+                        backMaterial = createMaterial(text, "#1f5eff", "white", "black");
+                    }
+
+                    const materials = [
+                        rightMaterial,   // prawa
+                        leftMaterial,    // lewa
+                        topMaterial,     // góra
+                        bottomMaterial,  // dół
+                        frontMaterial,   // przód
+                        backMaterial     // tył
+                    ];
+
+                    const smallCube = new THREE.Mesh(smallCubeGeometry, materials);
+                    smallCube.position.set(x, y, z);
+
+                    // Czarna siatka/krawędzie na pojedynczym elemencie kostki
+                    const edges = new THREE.EdgesGeometry(smallCubeGeometry);
+                    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
+                    const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
+                    smallCube.add(edgeLines);
+
+                    rubikCube.add(smallCube);
+                }
+            }
+        }
+
+        // STEROWANIE KAMERĄ MYSZKĄ
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.target.set(0, 0, 0);
+
+        // STEROWANIE KOSTKĄ KLAWIATURĄ
+
+        let autoRotate = true;
+        let speedMultiplier = 1.0;
+        const baseRotationSpeedY = 0.006;
+        const baseRotationSpeedX = 0.002;
+
+        const statusText = document.getElementById("status");
+        const speedText = document.getElementById("predkosc");
+
+        function updateInfoPanel() {
+            statusText.textContent = autoRotate ? "obrót włączony" : "obrót zatrzymany";
+            speedText.textContent = speedMultiplier.toFixed(1) + "x";
+        }
+
+        window.addEventListener("keydown", function(event) {
+            // Spacja - zatrzymanie lub wznowienie automatycznego obrotu
+            if (event.code === "Space") {
+                event.preventDefault();
+                autoRotate = !autoRotate;
+                updateInfoPanel();
+            }
+
+            // R - reset położenia kostki
+            if (event.key.toLowerCase() === "r") {
+                rubikCube.rotation.set(0, 0, 0);
+            }
+
+            // S - zwiększenie prędkości obrotu
+            if (event.key.toLowerCase() === "s") {
+                speedMultiplier = Math.min(3.0, speedMultiplier + 0.2);
+                updateInfoPanel();
+            }
+
+            // W - zmniejszenie prędkości obrotu
+            if (event.key.toLowerCase() === "w") {
+                speedMultiplier = Math.max(0.2, speedMultiplier - 0.2);
+                updateInfoPanel();
+            }
+        });
+
+        // ANIMACJA
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (autoRotate) {
+                rubikCube.rotation.y += baseRotationSpeedY * speedMultiplier;
+                rubikCube.rotation.x += baseRotationSpeedX * speedMultiplier;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        updateInfoPanel();
+        animate();
+
+        // DOPASOWANIE DO ZMIANY ROZMIARU OKNA
+
+        window.addEventListener("resize", function () {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
